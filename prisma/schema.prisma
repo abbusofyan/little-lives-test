@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum InvoiceStatus {
+  Pending
+  PartiallyPaid
+  Paid
+  Overpaid
+  Cancelled
+}
+
+enum PaymentMethod {
+  Cash
+  BankTransfer
+  Card
+}
+
+enum PaymentStatus {
+  Pending
+  Completed
+  Failed
+}
+
+model Invoice {
+  id                String        @id @default(uuid())
+  invoiceNumber     String        @unique
+  invoiceDate       DateTime
+  items             InvoiceItem[]
+  totalAmount       Float
+  totalTax          Float
+  outstandingAmount Float
+  status            InvoiceStatus @default(Pending)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  payments          Payment[]
+  receipts          Receipt[]
+}
+
+model InvoiceItem {
+  id          String  @id @default(uuid())
+  invoice     Invoice @relation(fields: [invoiceId], references: [id])
+  invoiceId   String
+  description String
+  quantity    Float
+  unitPrice   Float
+  lineTotal   Float
+  taxRate     Float
+  taxAmount   Float
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id])
+  invoiceId       String
+  paymentMethod   PaymentMethod
+  amount          Float
+  paymentDate     DateTime      @default(now())
+  referenceNumber String?
+  status          PaymentStatus @default(Completed)
+  receipts        Receipt[]
+}
+
+model Receipt {
+  id               String        @id @default(uuid())
+  payment          Payment       @relation(fields: [paymentId], references: [id])
+  paymentId        String
+  invoice          Invoice       @relation(fields: [invoiceId], references: [id])
+  invoiceId        String
+  receiptNumber    String        @unique
+  receiptDate      DateTime      @default(now())
+  totalPaid        Float
+  remainingBalance Float
+  items            ReceiptItem[]
+}
+
+model ReceiptItem {
+  id              String  @id @default(uuid())
+  receipt         Receipt @relation(fields: [receiptId], references: [id])
+  receiptId       String
+  invoiceItemId   String
+  allocatedAmount Float
+}
